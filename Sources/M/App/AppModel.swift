@@ -105,6 +105,13 @@ final class AppModel: ObservableObject {
             do {
                 let result = try await withTaskCancellationHandler { try await worker.value } onCancel: { worker.cancel() }
                 guard !Task.isCancelled, let self, let index = self.drafts.firstIndex(where: { $0.id == volume.id && $0.token == token }) else { return }
+                // Ruling V2: external disks that are not removable/ejectable (SSD,
+                // backup drives) stay silent unless they actually hold media.
+                if !volume.mediaLike && result.folders.isEmpty {
+                    self.drafts.removeAll { $0.id == volume.id }
+                    self.scanTasks.removeValue(forKey: volume.id)
+                    return
+                }
                 self.drafts[index].scan = result
                 self.drafts[index].selected = Set(result.folders.map(\.id))
                 self.drafts[index].phase = .ready

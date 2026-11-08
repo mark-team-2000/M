@@ -1,4 +1,5 @@
 import AppKit
+import Darwin
 import Foundation
 
 struct MountedCard: Identifiable, Equatable, Sendable {
@@ -6,15 +7,33 @@ struct MountedCard: Identifiable, Equatable, Sendable {
     let url: URL
     let name: String
     let volumeUUID: String
+    /// True for classic removable/ejectable media (SD/SD-express readers, disk images).
+    /// CFexpress Type B rides on NVMe/PCIe: many readers report the volume as fixed and
+    /// not ejectable, so external non-internal disks also qualify (V2 ruling) but they
+    /// surface in the UI only when they actually contain media folders.
+    var mediaLike: Bool = true
+
+    /// Ruling V2 (founder 08/11, «Non rileva le tessere CF express Type B»): accept
+    /// removable/ejectable media OR an external disk (non-internal, non-network,
+    /// browsable). Internal containers — boot volume included — can never qualify.
+    static func isCardLike(removable: Bool?, ejectable: Bool?, isInternal: Bool?, network: Bool?, browsable: Bool?) -> Bool {
+        if removable == true || ejectable == true { return true }
+        return isInternal == false && network != true && browsable != false
+    }
 
     static func read(_ url: URL) throws -> MountedCard? {
-        let values = try url.resourceValues(forKeys: [.volumeIsRemovableKey, .volumeIsEjectableKey, .volumeUUIDStringKey, .volumeNameKey, .volumeTotalCapacityKey])
-        guard values.volumeIsRemovable == true || values.volumeIsEjectable == true else { return nil }
+        let keys: Set<URLResourceKey> = [.volumeIsRemovableKey, .volumeIsEjectableKey, .volumeIsInternalKey, .volumeIsBrowsableKey, .volumeUUIDStringKey, .volumeNameKey, .volumeTotalCapacityKey]
+        let values = try url.resourceValues(forKeys: keys)
+        // Foundation exposes no network-volume resource key: MNT_LOCAL is the canonical check.
+        var stats = statfs()
+        let network = statfs(url.path, &stats) == 0 ? (stats.f_flags & UInt32(MNT_LOCAL)) == 0 : nil
+        let mediaLike = values.volumeIsRemovable == true || values.volumeIsEjectable == true
+        guard MountedCard.isCardLike(removable: values.volumeIsRemovable, ejectable: values.volumeIsEjectable, isInternal: values.volumeIsInternal, network: network, browsable: values.volumeIsBrowsable) else { return nil }
         let name = values.volumeName ?? url.lastPathComponent
         // Some FAT/exFAT volumes do not publish a persistent UUID. The required
         // name+capacity fallback is weaker (two identical cards can collide).
         let identity = values.volumeUUIDString ?? "fallback:\(name):\(values.volumeTotalCapacity ?? 0)"
-        return MountedCard(url: url, name: name, volumeUUID: identity)
+        return MountedCard(url: url, name: name, volumeUUID: identity, mediaLike: mediaLike)
     }
 }
 
@@ -71,7 +90,8 @@ final class CardWatcher {
         }
     }
     private func poll() {
-        guard let urls = FileManager.default.mountedVolumeURLs(includingResourceValuesForKeys: [.volumeIsRemovableKey, .volumeIsEjectableKey], options: []) else { return }
+        let keys: [URLResourceKey] = [.volumeIsRemovableKey, .volumeIsEjectableKey, .volumeIsInternalKey]
+        guard let urls = FileManager.default.mountedVolumeURLs(includingResourceValuesForKeys: keys, options: .skipHiddenVolumes) else { return }
         let paths = Set(urls.map(\.path))
         for path in Array(known.keys) where !paths.contains(path) {
             if let card = known.removeValue(forKey: path) { onUnmount?(card) }

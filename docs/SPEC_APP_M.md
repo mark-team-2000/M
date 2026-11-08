@@ -11,6 +11,11 @@ Testo letterale del founder: «l'app deve creare una cartella con il nome della 
 4. Le sessioni salvate prima della modifica (senza percorso registrato) adottano `<contenitore>/<nome sanitizzato>/` alla prima copia e il percorso effettivo viene persistito nel registro (`folderPath`).
 5. Se un **file** (non cartella) occupa quel nome: alla creazione di una nuova sessione M usa il suffisso ` 2` e il file non viene toccato; per una sessione già salvata con quel nome (percorso registrato) la copia si ferma con errore chiaro di rinomina.
 
+## RULING ITERAZIONE — V2 (08/11, founder; PREVALE su tutto ciò che segue)
+Testo letterale del founder: «Non rileva le tessere CF express Type B».
+1. I CFexpress Type B viaggiano su NVMe/PCIe: molti lettori li dichiarano a macOS come dischi fissi non rimovibili. Il riconoscimento delle schede accetta quindi: volume rimovibile o espellibile (come prima), **oppure** disco **esterno** (non interno, non di rete, browsable). I volumi interni — disco di avvio e contenitori di sistema — non possono mai qualificarsi (`volumeIsInternal` deve essere esplicitamente `false`).
+2. Anti-rumore: un volume esterno **non** rimovibile/espellibile (SSD esterni, dischi di backup) mostra il pannello di scarico **solo se la scansione trova cartelle con media**; senza media, M lo ignora silenziosamente.
+
 ## 1. Scopo
 App nativa macOS chiamata **M** per fotografi/videomaker: inserisci una scheda (SD, microSD, CFexpress, XQD, CompactFlash, qualsiasi volume rimovibile) e M fa l'ingest automaticamente dentro una **Sessione** con una cartella nominata per la tessera, copiando **tutto il contenuto** delle cartelle che contengono i file multimediali, con verifica di integrità **per dimensione** e **anti-ripetizione**: una scheda già scaricata non ricopia i file già copiati (il «tag rosso»).
 
