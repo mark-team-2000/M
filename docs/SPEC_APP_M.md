@@ -24,6 +24,7 @@ App nativa macOS chiamata **M** per fotografi/videomaker: inserisci una scheda (
 - Regola: una directory è **media folder massimo** se il suo sottoalbero contiene ≥1 file con estensione primaria E nessun **sottoalbero figlio** scelto la contiene già in via esclusiva — in pratica: risali dal file media fino alla radice; aggrega per **directory di livello più alto che ancora contiene media nel sottoalbero**, e copia quell'intera directory (tutto ciò che contiene, anche file non-media).
 - Cartelle di sistema da **ignorare sempre**: nomi che iniziano con `.` (`.Trashes`, `.fseventsd`, `.Spotlight-V100`, `.documentRevisions`), `lost+found`, `__MACOSX`. File con estensioni media **diretti sulla radice** della scheda ⇒ si copiano i loro contenitori fino alla radice (in tal caso la radice è il media folder, esclusi i percorsi di sistema).
 - La scansione non deve mai scrivere nulla sulla scheda, tranne il best-effort del Finder label (§2.6).
+- **EMENDATO (ruling del padre post-audit QA, 08/11):** politica symlink — un collegamento sulla scheda è ricreato a destinazione **solo se il suo target risolto resta dentro la scheda**; i link che escono (catene `..` o target assoluti) **non sono mai creati** a destinazione e compaiono come errore da-file nel report (test: `rejectsSymbolicLinksPointingOutsideTheCard`). Il registro interno resta la fonte di verità dei file copiati.
 
 ## 4. Persistenza (niente CoreData, niente DB esterne)
 JSON in `~/Library/Application Support/M/store.json` (crea le cartelle se mancanti), model `Store: Codable`, atomico:

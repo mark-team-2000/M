@@ -105,6 +105,7 @@ actor CopyEngine {
                         throw IngestError.message("Il file di destinazione esiste già; non è stato sovrascritto.")
                     }
                     if let link = file.symbolicLinkTarget {
+                        try validateSymbolicLink(link, at: source, root: request.sourceRoot)
                         try FileManager.default.createSymbolicLink(atPath: staging.path, withDestinationPath: link)
                         progress.transferredBytes += file.size
                         progress.currentFileBytes = file.size
@@ -194,6 +195,22 @@ actor CopyEngine {
         let destination = request.destinationRoot.resolvingSymlinksInPath().standardizedFileURL.path
         guard source != destination, !destination.hasPrefix(source + "/") else {
             throw IngestError.message("La destinazione non può trovarsi sulla scheda sorgente.")
+        }
+    }
+    /// A card symlink is recreated at destination only when its target resolves
+    /// INSIDE the card (QA Finding 1): escaping links must never be planted in the
+    /// user's photo library, where sync/backup/index tools would follow them.
+    /// Absolute targets and relative `..` chains are both contained-checked after
+    /// resolution; a rejected link surfaces as a per-file error, like size mismatches.
+    private func validateSymbolicLink(_ link: String, at source: URL, root: URL) throws {
+        let rootPath = root.resolvingSymlinksInPath().standardizedFileURL.path
+        let linkDirectory = source.deletingLastPathComponent().resolvingSymlinksInPath().standardizedFileURL
+        let candidate = (link as NSString).isAbsolutePath
+            ? URL(fileURLWithPath: link)
+            : linkDirectory.appendingPathComponent(link)
+        let resolved = candidate.resolvingSymlinksInPath().standardizedFileURL.path
+        guard resolved == rootPath || resolved.hasPrefix(rootPath + "/") else {
+            throw IngestError.message("Il collegamento rimanda a un percorso fuori dalla scheda; non è stato creato.")
         }
     }
     private func safeURL(_ relative: String, in root: URL) throws -> URL {

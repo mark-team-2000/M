@@ -4,19 +4,45 @@ import Testing
 
 struct CopyEngineTests {
     @Test func preservesSymbolicLinksWithoutReadingTheirTargets() async throws {
+        // REWRITTEN per QA Finding 1: card-internal links survive verbatim; the old
+        // fixture pinned an escaping link (../../outside.txt), the unsafe behaviour.
         let f = try Fixture()
         try f.put("source/DCIM/a.JPG")
-        try f.put("outside.txt", Data("do not follow".utf8))
+        try f.put("source/outside.txt", Data("do not follow".utf8))
         let link = f.root.appendingPathComponent("source/DCIM/support-link")
-        try FileManager.default.createSymbolicLink(atPath: link.path, withDestinationPath: "../../outside.txt")
+        try FileManager.default.createSymbolicLink(atPath: link.path, withDestinationPath: "../outside.txt")
         let source = f.root.appendingPathComponent("source")
         let scan = try ScanEngine.scan(root: source)
         let destination = f.root.appendingPathComponent("out")
         let outcome = await CopyEngine().run(CopyRequest(sourceRoot: source, destinationRoot: destination, volumeUUID: "A", sessionID: UUID(), folders: scan.folders, applyFinderTag: false, preventSleep: false), ledgerEntries: []) { _ in }
         #expect(outcome.status == .completata)
         #expect(outcome.fileCount == 2)
-        #expect(try FileManager.default.destinationOfSymbolicLink(atPath: destination.appendingPathComponent("DCIM/support-link").path) == "../../outside.txt")
-        #expect(try String(contentsOf: f.root.appendingPathComponent("outside.txt"), encoding: .utf8) == "do not follow")
+        #expect(try FileManager.default.destinationOfSymbolicLink(atPath: destination.appendingPathComponent("DCIM/support-link").path) == "../outside.txt")
+        // The target stays outside the copied tree: never read through the link.
+        #expect(!FileManager.default.fileExists(atPath: destination.appendingPathComponent("outside.txt").path))
+        #expect(try String(contentsOf: f.root.appendingPathComponent("source/outside.txt"), encoding: .utf8) == "do not follow")
+    }
+
+    @Test func rejectsSymbolicLinksPointingOutsideTheCard() async throws {
+        // QA Finding 1 (ALTA): relative `..` chains and absolute targets must not be
+        // recreated at destination; they surface as per-file errors, copy continues.
+        let f = try Fixture()
+        try f.put("source/DCIM/a.JPG")
+        try FileManager.default.createSymbolicLink(atPath: f.root.appendingPathComponent("source/DCIM/escape-rel").path, withDestinationPath: "../../../../../../../../etc/passwd")
+        try FileManager.default.createSymbolicLink(atPath: f.root.appendingPathComponent("source/DCIM/escape-abs").path, withDestinationPath: "/etc/passwd")
+        let source = f.root.appendingPathComponent("source")
+        let scan = try ScanEngine.scan(root: source)
+        let destination = f.root.appendingPathComponent("out")
+        let outcome = await CopyEngine().run(CopyRequest(sourceRoot: source, destinationRoot: destination, volumeUUID: "A", sessionID: UUID(), folders: scan.folders, applyFinderTag: false, preventSleep: false), ledgerEntries: []) { _ in }
+        #expect(outcome.status == .parziale)
+        #expect(outcome.fileCount == 1)
+        #expect(outcome.errors.filter { $0.contains("escape-rel") }.count == 1)
+        #expect(outcome.errors.filter { $0.contains("escape-abs") }.count == 1)
+        #expect(!FileManager.default.fileExists(atPath: destination.appendingPathComponent("DCIM/escape-rel").path))
+        #expect(!FileManager.default.fileExists(atPath: destination.appendingPathComponent("DCIM/escape-abs").path))
+        let leftovers = try FileManager.default.contentsOfDirectory(atPath: destination.appendingPathComponent("DCIM").path).filter { $0.hasPrefix(".M-") }
+        #expect(leftovers.isEmpty)
+        #expect(outcome.entries.allSatisfy { !$0.relativePath.contains("escape-") })
     }
 
     @Test func copiesWholeTreeAndSkipsRegisteredFiles() async throws {
