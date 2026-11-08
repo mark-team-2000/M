@@ -33,6 +33,13 @@ Testo del founder: «Potresti precompilare il nome della cartella con la data de
 1. Il campo **nome sessione** è precompilato con la data di oggi nel formato `mese.giorno.anno` con anno a due cifre (8 novembre 2026 → `11.08.26`), sempre modificabile.
 2. Le sessioni in archivio hanno un **pulsante visibile «Elimina sessione»** nell'header del dettaglio (oltre al cestino in sidebar), con la stessa conferma: si rimuovono solo i registri di M, mai i file su disco.
 
+## RULING ITERAZIONE — V6 (08/11, founder; PREVALE su tutto ciò che segue)
+Testo del founder: «Dalla sessione, permetti da un tasto aprire un progetto Cap Cut, dunque 0) Crei all'interno della cartella della sessione altre catelle, una la chiami : 0.1) Asset 0.2) Audio 0.3) Exports. 1) Apri app editing, 2) nomini con nome cartella. 3) importi materiale. cosi come è nella cartella, potrebbe essere diverso da come l'hai copiato tu.»
+1. Pulsante **«Apri CapCut»** sulla sessione attiva. Alla pressione M, nella cartella della sessione: crea se mancanti le sottocartelle **Asset**, **Audio**, **Exports**.
+2. M enumera i file di Asset e Audio **nello stato attuale** (ricorsivo, nascosti esclusi — pure materiale versato a mano dall'utente) e ne mostra il conteggio.
+3. Copia il **nome della sessione negli appunti** (nome del progetto da incollare in CapCut) e **apre CapCut**.
+4. ONESTÀ DI PIATTAFORMA: CapCut per Mac non espone API pubbliche per creare un progetto nominato o importare file da riga di comando (CFBundleDocumentTypes vuoto, solo scheme privato `capcut://`). Pertanto l'automazione arriva fin dove CapCut lo consente: cartelle, nome negli appunti, app aperta, conteggio pronto; in CapCut restano due gesti manuali («nuovo progetto» + incolla nome, «importa» dalla cartella Asset/Audio), guidati dall'avviso di M.
+
 ## 1. Scopo
 App nativa macOS chiamata **M** per fotografi/videomaker: inserisci una scheda (SD, microSD, CFexpress, XQD, CompactFlash, qualsiasi volume rimovibile) e M fa l'ingest automaticamente dentro una **Sessione** con una cartella nominata per la tessera, copiando **tutto il contenuto** delle cartelle che contengono i file multimediali, con verifica di integrità **per dimensione** e **anti-ripetizione**: una scheda già scaricata non ricopia i file già copiati (il «tag rosso»).
 

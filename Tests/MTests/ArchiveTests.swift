@@ -13,6 +13,30 @@ struct ArchiveTests {
         #expect(NewSessionView.defaultSessionName(date: Calendar(identifier: .gregorian).date(from: components)!) == "03.05.26")
     }
 
+    @Test func capCutPrepCreatesFoldersAndCountsMaterialAsItIsNow() async throws {
+        let f = try Fixture()
+        try f.put("container/.keep")
+        let repository = StoreRepository(url: f.root.appendingPathComponent("support/store.json"))
+        let model = AppModel(repository: repository, systemEffects: false)
+        model.createSession(name: "Reel", destination: f.root.appendingPathComponent("container"))
+        guard let session = model.store.sessions.first else { Issue.record("no session"); return }
+        // First press: empty folders get created, count is zero.
+        #expect(model.prepareCapCutProject(session) == 0)
+        for name in ["Asset", "Audio", "Exports"] {
+            #expect(FileManager.default.fileExists(atPath: session.folderURL.appendingPathComponent(name).path))
+        }
+        // Manual drops AFTER creation (structure different from M's copy): recount reflects the disk NOW.
+        try f.put("container/Reel/Asset/clip.MP4")
+        try f.put("container/Reel/Asset/Sotto/foto.CR3")
+        try f.put("container/Reel/Audio/musica.mp3")
+        try f.put("container/Reel/Asset/notes.txt")
+        try f.put("container/Reel/Asset/.DS_Store")
+        #expect(model.prepareCapCutProject(session) == 3)
+        // Exported files in Exports are not counted as material.
+        try f.put("container/Reel/Exports/finale.mp4")
+        #expect(model.prepareCapCutProject(session) == 3)
+    }
+
     @Test func endSessionWritesReportThenArchivesAndBlocksCopies() async throws {
         let f = try Fixture()
         try f.put("source/DCIM/a.JPG")

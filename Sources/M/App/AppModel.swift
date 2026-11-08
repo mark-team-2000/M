@@ -228,6 +228,43 @@ final class AppModel: ObservableObject {
         persist()
     }
     func cancelCopy() { copyTask?.cancel() }
+    /// V6 ruling: "Apri CapCut" prepares <session>/Asset, /Audio, /Exports, counts the
+    /// material as it exists RIGHT NOW (manual drops included), copies the project name
+    /// to the clipboard and opens CapCut. CapCut exposes no public API to create a named
+    /// project or import files, so the remaining two clicks are guided by the notice.
+    @discardableResult
+    func prepareCapCutProject(_ session: SessionRecord) -> Int {
+        let projectFolders = ["Asset", "Audio", "Exports"]
+        let extensions = ScanEngine.mediaExtensions.union(["mp3", "m4a", "aac", "flac", "aif", "aiff"])
+        var materialCount = 0
+        do {
+            for name in projectFolders {
+                try FileManager.default.createDirectory(at: session.folderURL.appendingPathComponent(name, isDirectory: true), withIntermediateDirectories: true)
+            }
+            for name in ["Asset", "Audio"] {
+                let root = session.folderURL.appendingPathComponent(name, isDirectory: true)
+                if let walker = FileManager.default.enumerator(at: root, includingPropertiesForKeys: [.isRegularFileKey], options: [.skipsHiddenFiles]) {
+                    for case let file as URL in walker where extensions.contains(file.pathExtension.lowercased()) {
+                        materialCount += 1
+                    }
+                }
+            }
+        } catch {
+            errorText = "Impossibile preparare le cartelle del progetto: \(error.localizedDescription). Ricollega il disco di destinazione."
+            return 0
+        }
+        if systemEffects {
+            NSPasteboard.general.clearContents()
+            NSPasteboard.general.setString(session.name, forType: .string)
+            if let capCut = NSWorkspace.shared.urlForApplication(withBundleIdentifier: "com.lemon.lvoverseas") {
+                NSWorkspace.shared.openApplication(at: capCut, configuration: NSWorkspace.OpenConfiguration())
+                notice = "Progetto «\(session.name)» · nome negli appunti · \(materialCount) file in Asset/Audio · in CapCut: nuovo progetto → incolla il nome → importa dalla cartella Asset/Audio"
+            } else {
+                errorText = "CapCut non è tra le applicazioni. Cartelle e conteggio pronti lo stesso: apri CapCut quando vuoi e importa da Asset/Audio."
+            }
+        }
+        return materialCount
+    }
     /// V3 ruling: "Fine sessione" pastes the REPORT into the session folder and
     /// archives the session. Files on disk are never touched.
     func endSession(_ session: SessionRecord) {

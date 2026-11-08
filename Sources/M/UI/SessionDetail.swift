@@ -86,6 +86,7 @@ struct SessionDetail: View {
                                 Text("Vengono rimossi i registri di M (sessione e tessere). I file su disco NON vengono eliminati e quelli già scaricati non verranno ricopiati in altre sessioni.")
                             }
                     } else {
+                        Button { model.prepareCapCutProject(session) } label: { Label("Apri CapCut", systemImage: "film") }.controlSize(.large).help("Prepara Asset/Audio/Exports nella cartella sessione, copia il nome del progetto negli appunti e apre CapCut. In CapCut: nuovo progetto → incolla il nome → importa dalla cartella Asset/Audio (il materiale conta così com'è adesso, anche se l'hai spostato a mano)")
                         Button { model.endSession(session) } label: { Label("Fine sessione", systemImage: "archivebox") }.controlSize(.large).help("Chiude la sessione: report nella cartella della sessione e archiviazione")
                     }
                 }
