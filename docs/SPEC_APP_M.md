@@ -28,6 +28,11 @@ Testo del founder (screenshot della finestra «Nuova sessione», freccia sul sel
 1. Nella finestra «Nuova sessione» compare la **lista dei volumi montati** (esterni per primi): un clic sceglie il volume come contenitore; la cartella della sessione verrà creata dentro il volume stesso (V1).
 2. Il selettore «Scegli…» resta per cartelle/sottocartelle qualsiasi. Pulsante di aggiornamento lista.
 
+## RULING ITERAZIONE — V5 (08/11, founder; PREVALE su tutto ciò che segue)
+Testo del founder: «Potresti precompilare il nome della cartella con la data del giorno della creazione ma con, ma in formatto mese.giorno.anno(anno solo gli ultimi due numeri). Non vedo come scegliere le sessioni per poi cancellarle, dunque tasto cancellare sessione archiviata.»
+1. Il campo **nome sessione** è precompilato con la data di oggi nel formato `mese.giorno.anno` con anno a due cifre (8 novembre 2026 → `11.08.26`), sempre modificabile.
+2. Le sessioni in archivio hanno un **pulsante visibile «Elimina sessione»** nell'header del dettaglio (oltre al cestino in sidebar), con la stessa conferma: si rimuovono solo i registri di M, mai i file su disco.
+
 ## 1. Scopo
 App nativa macOS chiamata **M** per fotografi/videomaker: inserisci una scheda (SD, microSD, CFexpress, XQD, CompactFlash, qualsiasi volume rimovibile) e M fa l'ingest automaticamente dentro una **Sessione** con una cartella nominata per la tessera, copiando **tutto il contenuto** delle cartelle che contengono i file multimediali, con verifica di integrità **per dimensione** e **anti-ripetizione**: una scheda già scaricata non ricopia i file già copiati (il «tag rosso»).
 

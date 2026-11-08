@@ -193,10 +193,17 @@ struct ContentView: View {
 struct NewSessionView: View {
     @ObservedObject var model: AppModel
     @Environment(\.dismiss) private var dismiss
-    @State private var name = ""
+    @State private var name = NewSessionView.defaultSessionName()
     @State private var destination: URL?
     @State private var volumes: [VolumeRow] = []
     @FocusState private var nameFocused: Bool
+    /// V5 ruling: prefill the session name with today as mese.giorno.aa (11.08.26).
+    static func defaultSessionName(date: Date = Date()) -> String {
+        let format = DateFormatter()
+        format.locale = Locale(identifier: "en_US_POSIX")
+        format.dateFormat = "MM.dd.yy"
+        return format.string(from: date)
+    }
     struct VolumeRow: Identifiable {
         let url: URL
         let name: String

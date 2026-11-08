@@ -4,6 +4,15 @@ import Testing
 
 @MainActor
 struct ArchiveTests {
+    @Test func defaultSessionNameUsesMonthDayTwoDigitYear() {
+        var components = DateComponents()
+        components.year = 2026; components.month = 11; components.day = 8
+        let date = Calendar(identifier: .gregorian).date(from: components)!
+        #expect(NewSessionView.defaultSessionName(date: date) == "11.08.26")
+        components.month = 3; components.day = 5
+        #expect(NewSessionView.defaultSessionName(date: Calendar(identifier: .gregorian).date(from: components)!) == "03.05.26")
+    }
+
     @Test func endSessionWritesReportThenArchivesAndBlocksCopies() async throws {
         let f = try Fixture()
         try f.put("source/DCIM/a.JPG")

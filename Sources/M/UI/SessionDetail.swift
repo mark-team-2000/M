@@ -3,6 +3,7 @@ import SwiftUI
 struct SessionDetail: View {
     @ObservedObject var model: AppModel
     let session: SessionRecord
+    @State private var showDeleteConfirm = false
     var cards: [CardRecord] { model.cards(for: session) }
     var body: some View {
         ScrollView {
@@ -77,6 +78,13 @@ struct SessionDetail: View {
                     Button { model.report(session) } label: { Label("Report", systemImage: "doc.text") }.controlSize(.large).help("Esporta il report Markdown nella destinazione e mostralo nel Finder")
                     if session.isArchived {
                         Button { model.restoreSession(session) } label: { Label("Riattiva", systemImage: "arrow.counterclockwise.circle") }.controlSize(.large).help("Riporta la sessione attiva: potrà scaricare nuove tessere")
+                        Button { showDeleteConfirm = true } label: { Label("Elimina sessione", systemImage: "trash") }.controlSize(.large).tint(.red)
+                            .alert("Eliminare «\(session.name)» da M?", isPresented: $showDeleteConfirm) {
+                                Button("Elimina", role: .destructive) { model.deleteSession(session) }
+                                Button("Annulla", role: .cancel) { }
+                            } message: {
+                                Text("Vengono rimossi i registri di M (sessione e tessere). I file su disco NON vengono eliminati e quelli già scaricati non verranno ricopiati in altre sessioni.")
+                            }
                     } else {
                         Button { model.endSession(session) } label: { Label("Fine sessione", systemImage: "archivebox") }.controlSize(.large).help("Chiude la sessione: report nella cartella della sessione e archiviazione")
                     }
