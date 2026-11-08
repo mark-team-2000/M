@@ -96,7 +96,12 @@ final class AppModel: ObservableObject {
         scanTasks[volume.id]?.cancel()
         drafts.removeAll { $0.id == volume.id }
         let draft = CardDraft(volume: volume, folderName: volume.name)
-        drafts.append(draft)
+        // V3 ruling: real removable cards always come before generic external disks.
+        if volume.mediaLike, let firstGeneric = drafts.firstIndex(where: { !$0.volume.mediaLike }) {
+            drafts.insert(draft, at: firstGeneric)
+        } else {
+            drafts.append(draft)
+        }
         scan(volume, token: draft.token)
     }
     private func scan(_ volume: MountedCard, token: UUID) {
@@ -150,6 +155,7 @@ final class AppModel: ObservableObject {
         guard !isCopying else { errorText = "Attendi la fine dello scaricamento in corso."; return }
         guard !persistenceFailed else { errorText = "Il registro non è scrivibile. Nessun file verrà copiato."; return }
         guard let session = activeSession else { errorText = "Nessuna sessione attiva. Crea o seleziona una sessione."; return }
+        guard !session.isArchived else { errorText = "La sessione «\(session.name)» è in archivio: riattivala per scaricare nuove tessere."; return }
         guard let index = drafts.firstIndex(where: { $0.id == draftID }), let scan = drafts[index].scan, mounted[draftID] != nil else { return }
         let draft = drafts[index]
         let folders = scan.folders.filter { draft.selected.contains($0.id) }
@@ -222,6 +228,36 @@ final class AppModel: ObservableObject {
         persist()
     }
     func cancelCopy() { copyTask?.cancel() }
+    /// V3 ruling: "Fine sessione" pastes the REPORT into the session folder and
+    /// archives the session. Files on disk are never touched.
+    func endSession(_ session: SessionRecord) {
+        guard let index = store.sessions.firstIndex(where: { $0.id == session.id }) else { return }
+        store.sessions[index].archived = true
+        let updated = store.sessions[index]
+        do {
+            let url = try ReportWriter.write(session: updated, cards: cards(for: updated))
+            notice = "Sessione «\(updated.name)» archiviata · Report: \(url.lastPathComponent)"
+        } catch {
+            errorText = "Sessione archiviata, ma il report non è stato scritto: \(error.localizedDescription). Ricollega il disco e premi di nuovo Report."
+        }
+        if selectedSessionID == session.id { selectedSessionID = store.sessions.first { $0.archived != true }?.id }
+        persist()
+    }
+    func restoreSession(_ session: SessionRecord) {
+        guard let index = store.sessions.firstIndex(where: { $0.id == session.id }) else { return }
+        store.sessions[index].archived = false
+        selectedSessionID = session.id
+        persist()
+    }
+    /// V3 ruling: deletion removes only M's records (session + its cards). Disk files
+    /// stay untouched and the global anti-duplicate ledger keeps protecting sessions.
+    func deleteSession(_ session: SessionRecord) {
+        store.sessions.removeAll { $0.id == session.id }
+        store.cards.removeAll { $0.sessionID == session.id }
+        if selectedSessionID == session.id { selectedSessionID = store.sessions.first { $0.archived != true }?.id ?? store.sessions.first?.id }
+        notice = "Sessione «\(session.name)» rimossa da M. I file su disco non sono stati toccati."
+        persist()
+    }
     /// V1 ruling: the session owns a folder inside the chosen container. Legacy
     /// sessions without a persisted folderPath adopt the derived one (persisted by
     /// the caller right after). A same-named FILE never gets clobbered.

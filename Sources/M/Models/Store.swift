@@ -9,6 +9,10 @@ struct SessionRecord: Codable, Identifiable, Sendable {
     /// Actual session folder created INSIDE destinationPath (V1 founder ruling).
     /// nil only for stores saved before the ruling: derived from the name on first use.
     var folderPath: String?
+    /// V3: archived sessions keep their history but never receive new cards.
+    /// Optional so stores saved before the ruling still decode.
+    var archived: Bool?
+    var isArchived: Bool { archived == true }
     var folderURL: URL {
         if let folderPath { return URL(fileURLWithPath: folderPath, isDirectory: true) }
         return URL(fileURLWithPath: destinationPath, isDirectory: true)

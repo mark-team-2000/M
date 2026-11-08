@@ -16,6 +16,18 @@ Testo letterale del founder: «Non rileva le tessere CF express Type B».
 1. I CFexpress Type B viaggiano su NVMe/PCIe: molti lettori li dichiarano a macOS come dischi fissi non rimovibili. Il riconoscimento delle schede accetta quindi: volume rimovibile o espellibile (come prima), **oppure** disco **esterno** (non interno, non di rete, browsable). I volumi interni — disco di avvio e contenitori di sistema — non possono mai qualificarsi (`volumeIsInternal` deve essere esplicitamente `false`).
 2. Anti-rumore: un volume esterno **non** rimovibile/espellibile (SSD esterni, dischi di backup) mostra il pannello di scarico **solo se la scansione trova cartelle con media**; senza media, M lo ignora silenziosamente.
 
+## RULING ITERAZIONE — V3 (08/11, founder; PREVALE su tutto ciò che segue)
+Testo del founder: «Attenzione ora mi mette anche la memoria di destinazione tra le memorie utilizzabili, okay, ma metterei come ultima scelta. Aggiungi logo all'app. fai tasto fine sessione e archiviala, poi in archivio aggiungi la possibilità di sceglie le altre sessioni e poterle cancellare. Con tasto fine sessione incolla Report nella cartella destinazione.»
+1. **Ordinamento schede**: un volume esterno «non scheda» (disco di destinazione/SSD) resta ammesso ma viene sempre mostrato **dopo** le schede rimovibili/espellibili, in coda all'elenco.
+2. **Logo**: l'app ha un'icona vera (AppIcon.icns generata da `scripts/make_icon.swift` al momento del bundle — nessun binario in repo; il runtime mantiene l'icona disegnata identica).
+3. **Fine sessione**: pulsante sulla sessione attiva → scrive il **REPORT nella cartella della sessione** (destinazione) e **archivia** la sessione (non riceve più tessere; copia rifiutata con messaggio chiaro). L'archiviazione non tocca mai i file su disco.
+4. **Archivio**: sezione «ARCHIVIO» in sidebar; le sessioni archiviate si possono selezionare (lettura), **riattivate** o **cancellate**. La cancellazione rimuove solo i record di M (sessione + tessere): i file su disco restano intatti; il registro anti-duplication globale resta valido (dichiarato nella conferma).
+
+## RULING ITERAZIONE — V4 (08/11, founder; PREVALE su tutto ciò che segue)
+Testo del founder (screenshot della finestra «Nuova sessione», freccia sul selettore destinazione): «Metti qui una lista di volumi, cosi possono scegliere il volume o la cartella».
+1. Nella finestra «Nuova sessione» compare la **lista dei volumi montati** (esterni per primi): un clic sceglie il volume come contenitore; la cartella della sessione verrà creata dentro il volume stesso (V1).
+2. Il selettore «Scegli…» resta per cartelle/sottocartelle qualsiasi. Pulsante di aggiornamento lista.
+
 ## 1. Scopo
 App nativa macOS chiamata **M** per fotografi/videomaker: inserisci una scheda (SD, microSD, CFexpress, XQD, CompactFlash, qualsiasi volume rimovibile) e M fa l'ingest automaticamente dentro una **Sessione** con una cartella nominata per la tessera, copiando **tutto il contenuto** delle cartelle che contengono i file multimediali, con verifica di integrità **per dimensione** e **anti-ripetizione**: una scheda già scaricata non ricopia i file già copiati (il «tag rosso»).
 

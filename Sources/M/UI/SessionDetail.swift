@@ -13,7 +13,18 @@ struct SessionDetail: View {
                     Surface(padding: 16) { Metric(title: "Copiati e verificati", value: Theme.gb(cards.reduce(0) { $0 + $1.copiedBytes }), symbol: "checkmark.shield") }
                     Surface(padding: 16) { Metric(title: "File al sicuro", value: "\(cards.reduce(0) { $0 + $1.fileCount })", symbol: "doc.on.doc") }
                 }
-                if model.drafts.isEmpty { WaitingCard() }
+                if session.isArchived {
+                    Surface(padding: 18) {
+                        HStack(spacing: 14) {
+                            Image(systemName: "archivebox.fill").font(.system(size: 20, weight: .light)).foregroundStyle(.secondary)
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("Sessione in archivio").font(.subheadline.weight(.semibold))
+                                Text("Storico e report restano consultabili. Premi «Riattiva» per tornare a scaricarci le tessere.").font(.caption).foregroundStyle(.secondary)
+                            }
+                            Spacer()
+                        }
+                    }
+                } else if model.drafts.isEmpty { WaitingCard() }
                 else {
                     ForEach($model.drafts) { $draft in
                         if draft.phase != .copying || model.card(draft.recordID)?.sessionID == session.id {
@@ -62,7 +73,14 @@ struct SessionDetail: View {
                     }.buttonStyle(.plain).help("Mostra la destinazione nel Finder")
                 }
                 Spacer(minLength: 16)
-                Button { model.report(session) } label: { Label("Report", systemImage: "doc.text") }.controlSize(.large).help("Esporta il report Markdown nella destinazione e mostralo nel Finder")
+                HStack(spacing: 10) {
+                    Button { model.report(session) } label: { Label("Report", systemImage: "doc.text") }.controlSize(.large).help("Esporta il report Markdown nella destinazione e mostralo nel Finder")
+                    if session.isArchived {
+                        Button { model.restoreSession(session) } label: { Label("Riattiva", systemImage: "arrow.counterclockwise.circle") }.controlSize(.large).help("Riporta la sessione attiva: potrà scaricare nuove tessere")
+                    } else {
+                        Button { model.endSession(session) } label: { Label("Fine sessione", systemImage: "archivebox") }.controlSize(.large).help("Chiude la sessione: report nella cartella della sessione e archiviazione")
+                    }
+                }
             }
         }
     }

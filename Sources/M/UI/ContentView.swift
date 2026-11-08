@@ -5,6 +5,8 @@ struct ContentView: View {
     @ObservedObject var model: AppModel
     @Binding var appearance: String
     @State private var showingNewSession = false
+    @State private var sessionToDelete: SessionRecord?
+    private var archivedSessions: [SessionRecord] { model.store.sessions.filter { $0.isArchived } }
     var body: some View {
         HStack(spacing: 0) {
             sidebar.frame(width: 260)
@@ -41,6 +43,12 @@ struct ContentView: View {
             }.ignoresSafeArea()
         }
         .sheet(isPresented: $showingNewSession) { NewSessionView(model: model) }
+        .alert(sessionToDelete.map { "Eliminare «\($0.name)» da M?" } ?? "", isPresented: Binding(get: { sessionToDelete != nil }, set: { if !$0 { sessionToDelete = nil } })) {
+            Button("Elimina", role: .destructive) { if let session = sessionToDelete { model.deleteSession(session) }; sessionToDelete = nil }
+            Button("Annulla", role: .cancel) { sessionToDelete = nil }
+        } message: {
+            Text("Vengono rimossi i registri di M (sessione e tessere). I file su disco NON vengono eliminati e quelli già scaricati non verranno ricopiati in altre sessioni.")
+        }
         .onReceive(NotificationCenter.default.publisher(for: .newMSession)) { _ in showingNewSession = true }
         .alert("M · Attenzione", isPresented: Binding(get: { !showingNewSession && model.errorText != nil }, set: { if !$0 { model.errorText = nil } })) {
             Button("Ho capito", role: .cancel) { model.errorText = nil }
@@ -64,14 +72,24 @@ struct ContentView: View {
             }.padding(.horizontal, 22).padding(.bottom, 12)
             ScrollView {
                 LazyVStack(spacing: 9) {
-                    ForEach(model.store.sessions) { session in
-                        sessionButton(session)
+                    ForEach(model.store.sessions.filter { !$0.isArchived }) { session in
+                        sessionButton(session, archived: false)
                     }
                     if model.store.sessions.isEmpty {
                         VStack(alignment: .leading, spacing: 8) {
                             Text("Si parte da una sessione.").font(.subheadline.weight(.medium))
                             Text("Scegli dove raccogliere le tue schede. Al resto pensa M.").font(.caption).foregroundStyle(.secondary).lineSpacing(3)
                         }.frame(maxWidth: .infinity, alignment: .leading).padding(12)
+                    }
+                    if !archivedSessions.isEmpty {
+                        HStack {
+                            Text("ARCHIVIO").font(.system(size: 10, weight: .semibold)).tracking(1.6).foregroundStyle(.tertiary)
+                            Spacer()
+                            Text("\(archivedSessions.count)").font(.system(size: 10)).foregroundStyle(.tertiary)
+                        }.padding(.horizontal, 4).padding(.top, 14).padding(.bottom, 2)
+                        ForEach(archivedSessions) { session in
+                            sessionButton(session, archived: true)
+                        }
                     }
                 }.padding(.horizontal, 12)
             }
@@ -84,31 +102,40 @@ struct ContentView: View {
             }.frame(maxWidth: .infinity).padding(.bottom, 20)
         }.background(.ultraThinMaterial)
     }
-    private func sessionButton(_ session: SessionRecord) -> some View {
+    private func sessionButton(_ session: SessionRecord, archived: Bool) -> some View {
         let selected = model.selectedSessionID == session.id
         let cards = model.cards(for: session)
-        return Button { model.selectedSessionID = session.id } label: {
-            VStack(alignment: .leading, spacing: 8) {
-                HStack {
-                    Image(systemName: "square.stack.3d.up.fill").foregroundStyle(selected ? Theme.accent : .secondary)
-                    Text(session.name).font(.system(size: 13, weight: .semibold)).lineLimit(1)
-                    Spacer(minLength: 0)
-                    if selected { Circle().fill(Theme.accent).frame(width: 6, height: 6) }
-                }
-                Text(session.destinationPath).font(.system(size: 10)).foregroundStyle(.secondary).lineLimit(1).truncationMode(.middle)
-                Text("\(cards.count) tessere  ·  \(Theme.gb(cards.reduce(0) { $0 + $1.copiedBytes }))")
-                    .font(.system(size: 10, weight: .medium)).foregroundStyle(.secondary)
-            }.padding(13).frame(maxWidth: .infinity, alignment: .leading)
-                .background(selected ? Theme.accent.opacity(0.10) : Color.primary.opacity(0.025), in: RoundedRectangle(cornerRadius: 13))
-                .overlay { RoundedRectangle(cornerRadius: 13).strokeBorder(selected ? Theme.accent.opacity(0.4) : .clear, lineWidth: 1) }
-                .contentShape(RoundedRectangle(cornerRadius: 13))
-        }.buttonStyle(.plain).help(session.destinationPath)
+        return ZStack(alignment: .topTrailing) {
+            Button { model.selectedSessionID = session.id } label: {
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack {
+                        Image(systemName: archived ? "archivebox.fill" : "square.stack.3d.up.fill").foregroundStyle(selected ? Theme.accent : .secondary)
+                        Text(session.name).font(.system(size: 13, weight: .semibold)).lineLimit(1).foregroundStyle(archived ? .secondary : .primary)
+                        Spacer(minLength: 0)
+                        if selected { Circle().fill(Theme.accent).frame(width: 6, height: 6) }
+                    }
+                    Text(session.destinationPath).font(.system(size: 10)).foregroundStyle(.secondary).lineLimit(1).truncationMode(.middle)
+                    Text("\(cards.count) tessere  ·  \(Theme.gb(cards.reduce(0) { $0 + $1.copiedBytes }))")
+                        .font(.system(size: 10, weight: .medium)).foregroundStyle(.secondary)
+                }.padding(13).frame(maxWidth: .infinity, alignment: .leading)
+                    .background(selected ? Theme.accent.opacity(0.10) : Color.primary.opacity(archived ? 0.015 : 0.025), in: RoundedRectangle(cornerRadius: 13))
+                    .overlay { RoundedRectangle(cornerRadius: 13).strokeBorder(selected ? Theme.accent.opacity(0.4) : .clear, lineWidth: 1) }
+                    .contentShape(RoundedRectangle(cornerRadius: 13))
+            }.buttonStyle(.plain).help(session.destinationPath)
+            if archived {
+                Button { sessionToDelete = session } label: {
+                    Image(systemName: "trash").font(.system(size: 10, weight: .semibold)).foregroundStyle(.secondary)
+                        .padding(7).background(.thinMaterial, in: Circle())
+                }.buttonStyle(.plain).help("Elimina la sessione da M (i file su disco restano)")
+                    .padding(6)
+            }
+        }
     }
     private var topBar: some View {
         HStack {
             HStack(spacing: 6) {
-                Circle().fill(model.activeSession == nil ? .orange : Theme.success).frame(width: 6, height: 6)
-                Text(model.activeSession == nil ? "Nessuna sessione attiva" : "Sessione attiva").font(.system(size: 11, weight: .medium)).foregroundStyle(.secondary)
+                Circle().fill(model.activeSession == nil ? .orange : model.activeSession?.isArchived == true ? .secondary : Theme.success).frame(width: 6, height: 6)
+                Text(model.activeSession == nil ? "Nessuna sessione attiva" : model.activeSession?.isArchived == true ? "Sessione in archivio" : "Sessione attiva").font(.system(size: 11, weight: .medium)).foregroundStyle(.secondary)
             }
             Spacer()
             if model.activeSession != nil {
@@ -168,7 +195,24 @@ struct NewSessionView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var name = ""
     @State private var destination: URL?
+    @State private var volumes: [VolumeRow] = []
     @FocusState private var nameFocused: Bool
+    struct VolumeRow: Identifiable {
+        let url: URL
+        let name: String
+        let isInternal: Bool
+        var id: String { url.path }
+    }
+    /// V4 ruling: pick the destination volume directly from the mounted list.
+    static func mountedVolumeRows() -> [VolumeRow] {
+        let keys: [URLResourceKey] = [.volumeNameKey, .volumeIsInternalKey]
+        let rows = (FileManager.default.mountedVolumeURLs(includingResourceValuesForKeys: keys, options: .skipHiddenVolumes) ?? []).compactMap { url -> VolumeRow? in
+            guard let values = try? url.resourceValues(forKeys: Set(keys)) else { return nil }
+            return VolumeRow(url: url, name: values.volumeName ?? url.lastPathComponent, isInternal: values.volumeIsInternal == true)
+        }
+        // External volumes first (the photographer's card destinations), then internal.
+        return rows.sorted { ($0.isInternal ? 1 : 0, $0.name.lowercased()) < ($1.isInternal ? 1 : 0, $1.name.lowercased()) }
+    }
     var body: some View {
         VStack(alignment: .leading, spacing: 24) {
             Image(systemName: "folder.badge.plus").font(.system(size: 34, weight: .light)).foregroundStyle(Theme.accent)
@@ -179,6 +223,37 @@ struct NewSessionView: View {
             VStack(alignment: .leading, spacing: 8) {
                 Text("NOME SESSIONE").font(.system(size: 10, weight: .semibold)).tracking(1).foregroundStyle(.secondary)
                 TextField("Es. Dolomiti · Novembre", text: $name).textFieldStyle(.roundedBorder).controlSize(.large).focused($nameFocused)
+            }
+            VStack(alignment: .leading, spacing: 10) {
+                HStack {
+                    Text("VOLUMI MONTATI").font(.system(size: 10, weight: .semibold)).tracking(1).foregroundStyle(.secondary)
+                    Spacer()
+                    Button { volumes = Self.mountedVolumeRows() } label: { Image(systemName: "arrow.clockwise") }
+                        .buttonStyle(.borderless).help("Aggiorna la lista dei volumi")
+                }
+                ScrollView {
+                    VStack(spacing: 6) {
+                        ForEach(volumes) { volume in
+                            let selected = destination == volume.url
+                            Button { destination = volume.url } label: {
+                                HStack(spacing: 10) {
+                                    Image(systemName: volume.isInternal ? "internaldrive.fill" : "externaldrive.fill")
+                                        .foregroundStyle(volume.isInternal ? Color.secondary : Theme.accent)
+                                    VStack(alignment: .leading, spacing: 1) {
+                                        Text(volume.name).font(.system(size: 12, weight: .medium))
+                                        Text(volume.url.path).font(.system(size: 9)).foregroundStyle(.secondary).lineLimit(1).truncationMode(.middle)
+                                    }
+                                    Spacer()
+                                    if selected { Image(systemName: "checkmark.circle.fill").foregroundStyle(Theme.accent) }
+                                }
+                                .padding(.horizontal, 11).padding(.vertical, 7).frame(maxWidth: .infinity, alignment: .leading)
+                                .background(selected ? Theme.accent.opacity(0.10) : Color.primary.opacity(0.03), in: RoundedRectangle(cornerRadius: 9))
+                                .overlay { RoundedRectangle(cornerRadius: 9).strokeBorder(selected ? Theme.accent.opacity(0.45) : .clear, lineWidth: 1) }
+                                .contentShape(RoundedRectangle(cornerRadius: 9))
+                            }.buttonStyle(.plain)
+                        }
+                    }
+                }.frame(maxHeight: 132)
             }
             VStack(alignment: .leading, spacing: 10) {
                 Text("CARTELLA DI DESTINAZIONE").font(.system(size: 10, weight: .semibold)).tracking(1).foregroundStyle(.secondary)
@@ -200,7 +275,7 @@ struct NewSessionView: View {
                     }
                 }.buttonStyle(PrimaryButtonStyle()).disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || destination == nil).keyboardShortcut(.defaultAction)
             }
-        }.padding(32).frame(width: 480).onAppear { nameFocused = true }
+        }.padding(32).frame(width: 480).onAppear { nameFocused = true; volumes = Self.mountedVolumeRows() }
         .alert("Impossibile creare la sessione", isPresented: Binding(get: { model.errorText != nil }, set: { if !$0 { model.errorText = nil } })) {
             Button("Ho capito", role: .cancel) { model.errorText = nil }
         } message: { Text(model.errorText ?? "") }
