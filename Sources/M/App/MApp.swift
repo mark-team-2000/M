@@ -6,6 +6,23 @@ struct MApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var delegate
     @StateObject private var model = AppModel()
     @AppStorage("appearance") private var appearance = "dark"
+    /// V7: headless test entry — `M --capcut-draft <nome>` creates the draft and exits,
+    /// no GUI. Used by the honest end-to-end prova.
+    init() {
+        let args = CommandLine.arguments
+        if let index = args.firstIndex(of: "--capcut-draft"), index + 1 < args.count {
+            let name = args[index + 1]
+            do {
+                guard let layout = CapCutDraftFactory.installedLayout() else { throw CapCutDraftError.notInstalled }
+                let folder = try CapCutDraftFactory.createDraft(named: name, in: layout, running: CapCutDraftFactory.isCapCutRunning())
+                print("CREATO \(folder.path)")
+                exit(0)
+            } catch {
+                FileHandle.standardError.write(Data("ERRORE \(error.localizedDescription)\n".utf8))
+                exit(1)
+            }
+        }
+    }
     var body: some Scene {
         WindowGroup("M") {
             ContentView(model: model, appearance: $appearance)

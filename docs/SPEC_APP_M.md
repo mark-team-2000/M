@@ -40,6 +40,13 @@ Testo del founder: «Dalla sessione, permetti da un tasto aprire un progetto Cap
 3. Copia il **nome della sessione negli appunti** (nome del progetto da incollare in CapCut) e **apre CapCut**.
 4. ONESTÀ DI PIATTAFORMA: CapCut per Mac non espone API pubbliche per creare un progetto nominato o importare file da riga di comando (CFBundleDocumentTypes vuoto, solo scheme privato `capcut://`). Pertanto l'automazione arriva fin dove CapCut lo consente: cartelle, nome negli appunti, app aperta, conteggio pronto; in CapCut restano due gesti manuali («nuovo progetto» + incolla nome, «importa» dalla cartella Asset/Audio), guidati dall'avviso di M.
 
+## RULING ITERAZIONE — V7 (08/11, founder; PREVALE su tutto ciò che segue)
+Testo del founder: «/Users/mark/Movies/CapCut/CapCut Drafts/1022. se tu vedi qui Cap Cut crea la cartella dei progetti, l'ultimo in numeri è il nome del progetto. possiamo avvicinarci ? poi da li importo i file su quel progetto. TU solo crea. fai una prova nel caso onesto come dici tu»
+1. «Apri CapCut» **crea il progetto CapCut vero e proprio** (draft) col **nome della sessione**, dentro `~/Movies/CapCut/CapCut Drafts/<nome>`: cartella + `draft_content.json` vuoto + `draft_meta_info.json` + voce nel registro globale `User Data/Projects/com.lveditor.draft/root_meta_info.json`. L'import dei file resta manuale in CapCut (il founder l'ha accettato: «poi da li importo i file su quel progetto»).
+2. La struttura è clonata dal **progetto donatore** (il draft esistente più recente) svuotato di materiali/tracce — così lo schema JSON resta quello che CapCut si aspetta, versione compresa. Nessun progetto esistente viene mai toccato.
+3. Il registro globale viene **copiato con backup** (`root_meta_info.m-backup-<epoch>.json` nella radice CapCut) e riscritto **atomico**; se CapCut è **aperto** la creazione è rifiutata (M sovrascriverebbe il suo registro) con messaggio chiaro: chiudere CapCut e ripremere il tasto.
+4. CLI di prova onesta: `M --capcut-draft <nome>` crea il draft headless senza GUI e riporta l'esito.
+
 ## 1. Scopo
 App nativa macOS chiamata **M** per fotografi/videomaker: inserisci una scheda (SD, microSD, CFexpress, XQD, CompactFlash, qualsiasi volume rimovibile) e M fa l'ingest automaticamente dentro una **Sessione** con una cartella nominata per la tessera, copiando **tutto il contenuto** delle cartelle che contengono i file multimediali, con verifica di integrità **per dimensione** e **anti-ripetizione**: una scheda già scaricata non ricopia i file già copiati (il «tag rosso»).
 

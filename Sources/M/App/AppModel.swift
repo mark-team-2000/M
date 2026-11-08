@@ -256,9 +256,25 @@ final class AppModel: ObservableObject {
         if systemEffects {
             NSPasteboard.general.clearContents()
             NSPasteboard.general.setString(session.name, forType: .string)
+            let configuration = NSWorkspace.OpenConfiguration()
+            configuration.activates = true
             if let capCut = NSWorkspace.shared.urlForApplication(withBundleIdentifier: "com.lemon.lvoverseas") {
-                NSWorkspace.shared.openApplication(at: capCut, configuration: NSWorkspace.OpenConfiguration())
-                notice = "Progetto «\(session.name)» · nome negli appunti · \(materialCount) file in Asset/Audio · in CapCut: nuovo progetto → incolla il nome → importa dalla cartella Asset/Audio"
+                if CapCutDraftFactory.isCapCutRunning() {
+                    NSWorkspace.shared.openApplication(at: capCut, configuration: configuration)
+                    notice = "CapCut è ancora aperto: cartelle pronte, ma il progetto vuoto si crea solo a CapCut chiuso. Chiudilo e ripremi «Apri CapCut»."
+                } else if let layout = CapCutDraftFactory.installedLayout() {
+                    do {
+                        _ = try CapCutDraftFactory.createDraft(named: session.name, in: layout, running: false)
+                        NSWorkspace.shared.openApplication(at: capCut, configuration: configuration)
+                        notice = "Progetto CapCut «\(session.name)» creato · \(materialCount) file pronti in Asset/Audio · importa da lì (nome anche negli appunti)"
+                    } catch {
+                        NSWorkspace.shared.openApplication(at: capCut, configuration: configuration)
+                        errorText = "Progetto CapCut non creato: \(error.localizedDescription)"
+                    }
+                } else {
+                    NSWorkspace.shared.openApplication(at: capCut, configuration: configuration)
+                    notice = "Progetto «\(session.name)» · nome negli appunti · \(materialCount) file in Asset/Audio · in CapCut: nuovo progetto → incolla il nome → importa da Asset/Audio"
+                }
             } else {
                 errorText = "CapCut non è tra le applicazioni. Cartelle e conteggio pronti lo stesso: apri CapCut quando vuoi e importa da Asset/Audio."
             }
