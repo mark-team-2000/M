@@ -6,6 +6,14 @@ struct SessionRecord: Codable, Identifiable, Sendable {
     var destinationPath: String
     var createdAt: Date = Date()
     var cardIDs: [UUID] = []
+    /// Actual session folder created INSIDE destinationPath (V1 founder ruling).
+    /// nil only for stores saved before the ruling: derived from the name on first use.
+    var folderPath: String?
+    var folderURL: URL {
+        if let folderPath { return URL(fileURLWithPath: folderPath, isDirectory: true) }
+        return URL(fileURLWithPath: destinationPath, isDirectory: true)
+            .appendingPathComponent(FolderNaming.sanitize(name, volumeName: "SESSIONE"), isDirectory: true)
+    }
 }
 
 enum CardStatus: String, Codable, Sendable {

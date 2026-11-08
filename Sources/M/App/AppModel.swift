@@ -83,7 +83,9 @@ final class AppModel: ObservableObject {
         guard !persistenceFailed else { errorText = "Il registro non è disponibile. Riavvia M dopo aver ripristinato i permessi."; return }
         do {
             try DestinationCheck.validate(destination, requiredBytes: 0)
-            let session = SessionRecord(name: String(trimmed.prefix(120)), destinationPath: destination.path)
+            // V1 ruling: the session owns a folder inside the chosen container.
+            let sessionFolder = try FolderNaming.reserve(in: destination, name: String(trimmed.prefix(120)))
+            let session = SessionRecord(name: String(trimmed.prefix(120)), destinationPath: destination.path, folderPath: sessionFolder.path)
             store.sessions.insert(session, at: 0)
             selectedSessionID = session.id
             persist()
@@ -146,7 +148,7 @@ final class AppModel: ObservableObject {
         let folders = scan.folders.filter { draft.selected.contains($0.id) }
         guard !folders.isEmpty else { errorText = "Seleziona almeno una cartella da scaricare."; return }
         do {
-            let parent = URL(fileURLWithPath: session.destinationPath, isDirectory: true)
+            let parent = try ensureSessionFolder(session)
             let source = draft.volume.url.resolvingSymlinksInPath().standardizedFileURL.path
             let destination = parent.resolvingSymlinksInPath().standardizedFileURL.path
             guard source != destination, !destination.hasPrefix(source + "/") else { throw IngestError.message("Scegli una destinazione diversa dalla scheda sorgente.") }
@@ -157,7 +159,7 @@ final class AppModel: ObservableObject {
             let target = try FolderNaming.reserve(in: parent, name: name)
             let record = CardRecord(sessionID: session.id, volumeName: draft.volume.name, volumeUUID: draft.volume.volumeUUID, folderName: target.lastPathComponent, destPath: target.path)
             store.cards.append(record)
-            if let sessionIndex = store.sessions.firstIndex(where: { $0.id == session.id }) { store.sessions[sessionIndex].cardIDs.append(record.id) }
+            if let sessionIndex = store.sessions.firstIndex(where: { $0.id == session.id }) { store.sessions[sessionIndex].cardIDs.append(record.id); store.sessions[sessionIndex].folderPath = parent.path }
             drafts[index].recordID = record.id
             drafts[index].phase = .copying
             activeCopyID = record.id
@@ -213,6 +215,22 @@ final class AppModel: ObservableObject {
         persist()
     }
     func cancelCopy() { copyTask?.cancel() }
+    /// V1 ruling: the session owns a folder inside the chosen container. Legacy
+    /// sessions without a persisted folderPath adopt the derived one (persisted by
+    /// the caller right after). A same-named FILE never gets clobbered.
+    private func ensureSessionFolder(_ session: SessionRecord) throws -> URL {
+        let folder = session.folderURL
+        var isDirectory: ObjCBool = false
+        if FileManager.default.fileExists(atPath: folder.path, isDirectory: &isDirectory) {
+            guard isDirectory.boolValue else {
+                throw IngestError.message("Nella destinazione esiste già un file chiamato «\(folder.lastPathComponent)». Rinomina la sessione o scegli un'altra destinazione.")
+            }
+            return folder
+        }
+        do { try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: false) }
+        catch { throw IngestError.message("Impossibile creare la cartella della sessione: \(error.localizedDescription). Ricollega il disco di destinazione.") }
+        return folder
+    }
     func waitForCurrentCopy() async { await copyTask?.value }
     func waitForScan(_ id: String) async { await scanTasks[id]?.value }
     func eject(_ volume: MountedCard) {

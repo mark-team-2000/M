@@ -3,6 +3,14 @@
 > Questo file è il CONTRATTO. Qualsiasi divergenza va dichiarata nel report finale del builder.
 > Founder: Mark. Lingua UI: italiano. Stato: APPROVATA (default confermati dal founder).
 
+## RULING ITERAZIONE — V1 (08/11, founder; PREVALE su tutto ciò che segue)
+Testo letterale del founder: «l'app deve creare una cartella con il nome della sessione all'interno di quella che ora è la cartella di destinazione che si può scegliere il volumes dove possono andare.»
+1. La cartella scelta dall'utente è il **contenitore** (in genere un volume): la selezione via pannello non cambia, il volume si sceglie lì.
+2. Alla creazione della sessione M crea `<contenitore>/<nome sessione>/` — nome sanitizzato secondo §5; collisione ⇒ suffisso ` 2`, ` 3`… (stessa regola delle tessere).
+3. Le cartelle delle tessere e il REPORT stanno **dentro** la cartella sessione: `<contenitore>/<sessione>/<tessera>/…`.
+4. Le sessioni salvate prima della modifica (senza percorso registrato) adottano `<contenitore>/<nome sanitizzato>/` alla prima copia e il percorso effettivo viene persistito nel registro (`folderPath`).
+5. Se un **file** (non cartella) occupa quel nome: alla creazione di una nuova sessione M usa il suffisso ` 2` e il file non viene toccato; per una sessione già salvata con quel nome (percorso registrato) la copia si ferma con errore chiaro di rinomina.
+
 ## 1. Scopo
 App nativa macOS chiamata **M** per fotografi/videomaker: inserisci una scheda (SD, microSD, CFexpress, XQD, CompactFlash, qualsiasi volume rimovibile) e M fa l'ingest automaticamente dentro una **Sessione** con una cartella nominata per la tessera, copiando **tutto il contenuto** delle cartelle che contengono i file multimediali, con verifica di integrità **per dimensione** e **anti-ripetizione**: una scheda già scaricata non ricopia i file già copiati (il «tag rosso»).
 

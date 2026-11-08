@@ -184,9 +184,10 @@ struct NewSessionView: View {
                 Text("CARTELLA DI DESTINAZIONE").font(.system(size: 10, weight: .semibold)).tracking(1).foregroundStyle(.secondary)
                 HStack(spacing: 12) {
                     Image(systemName: "externaldrive.fill").font(.title2).foregroundStyle(Theme.accent)
-                    Text(destination?.path ?? "Dove vuoi salvare i tuoi file?").font(.caption).foregroundStyle(destination == nil ? .secondary : .primary).lineLimit(2).truncationMode(.middle).frame(maxWidth: .infinity, alignment: .leading)
+                    Text(destination?.path ?? "Scegli un volume o una cartella contenitrice").font(.caption).foregroundStyle(destination == nil ? .secondary : .primary).lineLimit(2).truncationMode(.middle).frame(maxWidth: .infinity, alignment: .leading)
                     Button("Scegli…", action: chooseDestination)
                 }.padding(14).background(.quaternary.opacity(0.5), in: RoundedRectangle(cornerRadius: 12))
+                Text("Dentro la cartella scelta, M crea la cartella «\(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "nome-sessione" : name.trimmingCharacters(in: .whitespacesAndNewlines))» e ci mette le tessere e il report.").font(.caption2).foregroundStyle(.secondary).lineSpacing(2)
             }
             Text("La sessione selezionata sarà quella attiva. Puoi cambiarla in qualsiasi momento dalla barra laterale.").font(.caption).foregroundStyle(.secondary).lineSpacing(3)
             HStack {

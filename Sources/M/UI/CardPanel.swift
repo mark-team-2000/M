@@ -69,7 +69,7 @@ struct CardPanel: View {
                 Text("NOME CARTELLA TESSERA").font(.system(size: 10, weight: .semibold)).tracking(1.3).foregroundStyle(.secondary)
                 TextField("Es. Matrimonio-Giorno1", text: $draft.folderName).textFieldStyle(.roundedBorder).controlSize(.large)
                 if let session = model.activeSession {
-                    Text("\(session.destinationPath)/\(FolderNaming.sanitize(draft.folderName, volumeName: draft.volume.name))")
+                    Text("\(session.folderURL.path)/\(FolderNaming.sanitize(draft.folderName, volumeName: draft.volume.name))")
                         .font(.system(size: 10, design: .monospaced)).foregroundStyle(.tertiary).lineLimit(2).truncationMode(.middle)
                 }
                 Text("Se il nome esiste già, M aggiunge un suffisso (2, 3…). Nessuna sovrascrittura.").font(.system(size: 10)).foregroundStyle(.tertiary)

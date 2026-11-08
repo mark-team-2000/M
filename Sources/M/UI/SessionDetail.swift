@@ -53,10 +53,10 @@ struct SessionDetail: View {
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 7) {
                     Text(session.name).font(.system(size: 31, weight: .semibold, design: .rounded)).tracking(-0.7).textSelection(.enabled)
-                    Button { model.reveal(session.destinationPath) } label: {
+                    Button { model.reveal(session.folderURL.path) } label: {
                         HStack(spacing: 5) {
                             Image(systemName: "folder")
-                            Text(session.destinationPath).lineLimit(1).truncationMode(.middle)
+                            Text(session.folderURL.path).lineLimit(1).truncationMode(.middle)
                             Image(systemName: "arrow.up.right").font(.system(size: 8))
                         }.font(.system(size: 11)).foregroundStyle(.secondary)
                     }.buttonStyle(.plain).help("Mostra la destinazione nel Finder")
